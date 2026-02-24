@@ -25,8 +25,19 @@ const app = express();
 
 // Middleware
 app.use(cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
-    credentials: true
+    origin: (origin, callback) => {
+        // Allow requests with no origin (like mobile apps or curl) or matching the env var
+        const allowedOrigins = [process.env.FRONTEND_URL, 'http://localhost:5173', 'http://localhost:3000'].filter(Boolean);
+        if (!origin || allowedOrigins.includes(origin) || origin.includes('vercel.app')) {
+            callback(null, true);
+        } else {
+            console.log('Blocked by CORS:', origin);
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization']
 }));
 app.use(express.json());
 
@@ -49,7 +60,14 @@ app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 const server = http.createServer(app);
 const io = new Server(server, {
     cors: {
-        origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+        origin: (origin, callback) => {
+            const allowedOrigins = [process.env.FRONTEND_URL, 'http://localhost:5173', 'http://localhost:3000'].filter(Boolean);
+            if (!origin || allowedOrigins.includes(origin) || origin.includes('vercel.app')) {
+                callback(null, true);
+            } else {
+                callback(new Error('Not allowed by CORS'));
+            }
+        },
         credentials: true
     }
 });
