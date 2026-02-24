@@ -25,19 +25,8 @@ const app = express();
 
 // Middleware
 app.use(cors({
-    origin: (origin, callback) => {
-        // Allow requests with no origin (like mobile apps or curl) or matching the env var
-        const allowedOrigins = [process.env.FRONTEND_URL, 'http://localhost:5173', 'http://localhost:3000'].filter(Boolean);
-        if (!origin || allowedOrigins.includes(origin) || origin.includes('vercel.app')) {
-            callback(null, true);
-        } else {
-            console.log('Blocked by CORS:', origin);
-            callback(new Error('Not allowed by CORS'));
-        }
-    },
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    credentials: true
 }));
 app.use(express.json());
 
@@ -60,14 +49,7 @@ app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
 const server = http.createServer(app);
 const io = new Server(server, {
     cors: {
-        origin: (origin, callback) => {
-            const allowedOrigins = [process.env.FRONTEND_URL, 'http://localhost:5173', 'http://localhost:3000'].filter(Boolean);
-            if (!origin || allowedOrigins.includes(origin) || origin.includes('vercel.app')) {
-                callback(null, true);
-            } else {
-                callback(new Error('Not allowed by CORS'));
-            }
-        },
+        origin: process.env.FRONTEND_URL || 'http://localhost:5173',
         credentials: true
     }
 });
@@ -86,10 +68,21 @@ io.use(async (socket, next) => {
             if (user) user.role = 'organizer';
         } else {
             user = await User.findById(decoded.id).select('-password');
+            if (user) {
+                // Explicitly set role for admin/participant if missing from model for some reason
+                user.role = decoded.role || 'participant';
+            }
         }
 
         if (!user) return next(new Error('User not found'));
+
+        // Final fallback for role detection
+        if (user.organizerName) {
+            user.role = 'organizer';
+        }
+
         socket.user = user;
+        console.log(`Socket connected: ${user.role} (${user._id})`);
         next();
     } catch (err) {
         next(new Error('Invalid token'));

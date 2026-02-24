@@ -37,7 +37,7 @@ export const AuthProvider = ({ children }) => {
     });
 
     // role must come from the login response (the Organizer model has no role field)
-    const fullUserData = { ...userData, ...profileResponse.data, role };
+    const fullUserData = { ...profileResponse.data, ...userData, role };
     localStorage.setItem('user', JSON.stringify(fullUserData));
     setUser(fullUserData);
 
