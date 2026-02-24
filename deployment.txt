@@ -1,0 +1,4 @@
+# Felicity Event Management System - Deployment Links
+
+Backend (Render): [PENDING - User to fill]
+Frontend (Vercel): [PENDING - User to fill]
